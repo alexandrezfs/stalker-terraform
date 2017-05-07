@@ -1,18 +1,21 @@
+# Setup Terraform to work with AWS.
 provider "aws" {
   region = "us-east-1"
 }
 
+# Getting all availability zones
 data "aws_availability_zones" "all" {}
 
+# Our ASG for our app.
 resource "aws_autoscaling_group" "stalker" {
-  launch_configuration = "${aws_launch_configuration.stalker.id}"
-  availability_zones = ["${data.aws_availability_zones.all.names}"]
+  launch_configuration = "${aws_launch_configuration.stalker.id}" # On our app lauch config
+  availability_zones = ["${data.aws_availability_zones.all.names}"] # Available everywhere
 
   min_size = 2
   max_size = 10
 
-  load_balancers = ["${aws_elb.stalker.name}"]
-  health_check_type = "ELB"
+  load_balancers = ["${aws_elb.stalker.name}"] # Link it to our ELB
+  health_check_type = "ELB" # The ELB will do the health check
 
   tag {
     key = "Name"
@@ -21,8 +24,7 @@ resource "aws_autoscaling_group" "stalker" {
   }
 }
 
-
-
+# Our app launch configuration
 resource "aws_launch_configuration" "stalker" {
 
   image_id = "ami-2d39803a"
@@ -35,12 +37,13 @@ resource "aws_launch_configuration" "stalker" {
               nohup busybox httpd -f -p "${var.server_port}" &
               EOF
 
+  # Create ressources before destroying it.
   lifecycle {
     create_before_destroy = true
   }
 }
 
-
+# Our instance security group.
 resource "aws_security_group" "instance" {
   name = "terraform-stalker-instance"
 
@@ -56,13 +59,13 @@ resource "aws_security_group" "instance" {
   }
 }
 
-
-
+# Our ELB attached to our ASG
 resource "aws_elb" "stalker" {
   name = "terraform-asg-stalker"
-  security_groups = ["${aws_security_group.elb.id}"]
-  availability_zones = ["${data.aws_availability_zones.all.names}"]
+  security_groups = ["${aws_security_group.elb.id}"] # We link it to our ELB security group
+  availability_zones = ["${data.aws_availability_zones.all.names}"] # Available everywhere
 
+  # ELB Health check rules
   health_check {
     healthy_threshold = 2
     unhealthy_threshold = 2
@@ -71,6 +74,7 @@ resource "aws_elb" "stalker" {
     target = "HTTP:${var.server_port}/"
   }
 
+  # Listen for web traffic and forward it to instances
   listener {
     lb_port = 80
     lb_protocol = "http"
@@ -79,8 +83,7 @@ resource "aws_elb" "stalker" {
   }
 }
 
-
-
+# Our ELB security group. Accept web traffic, and any outgoing traffic
 resource "aws_security_group" "elb" {
   name = "terraform-stalker-elb"
 
