@@ -6,6 +6,16 @@ provider "aws" {
 # Getting all availability zones
 data "aws_availability_zones" "all" {}
 
+# Last AMI image
+data "aws_ami" "image" {
+  most_recent = true
+  owners = ["self"]
+  filter {
+    name = "tag:app"
+    values = ["social_network_stalker"]
+  }
+}
+
 # Our ASG for our app.
 resource "aws_autoscaling_group" "stalker" {
   launch_configuration = "${aws_launch_configuration.stalker.id}" # On our app lauch config
@@ -27,7 +37,7 @@ resource "aws_autoscaling_group" "stalker" {
 # Our app launch configuration
 resource "aws_launch_configuration" "stalker" {
 
-  image_id = "ami-2d39803a"
+  image_id = "${data.aws_ami.image.id}"
   instance_type = "t2.micro"
   security_groups = ["${aws_security_group.instance.id}"]
 
