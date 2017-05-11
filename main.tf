@@ -43,8 +43,7 @@ resource "aws_launch_configuration" "stalker" {
 
   user_data = <<-EOF
               #!/bin/bash
-              echo "Hello, World" > index.html
-              nohup busybox httpd -f -p "${var.server_port}" &
+              sudo /bin/bash /opt/stalker/firstboot.sh
               EOF
 
   # Create ressources before destroying it.
@@ -61,6 +60,20 @@ resource "aws_security_group" "instance" {
     from_port = "${var.server_port}"
     to_port = "${var.server_port}"
     protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 22
+    to_port = 22
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 0
+    to_port   = 0
+    protocol  = "icmp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
